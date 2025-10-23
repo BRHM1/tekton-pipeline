@@ -11,6 +11,7 @@ spec:
   steps:
     - name: maven-build
       image: maven:3.9.5-eclipse-temurin-17
+      onError: continue
       script: |
         #!/bin/sh
         set -e

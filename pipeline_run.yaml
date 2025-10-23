@@ -34,3 +34,14 @@ spec:
       value: "1"
     - name: sonatype-auth-secret
       value: "sca-credentials"
+    - name: ssc-url
+      value: "http://34.18.141.239:8080/ssc"
+    - name: ssc-application-id
+      value: "10001"
+    - name: sensor-version
+      value: "25.2"
+      description: The version of the Fortify SAST sensor to use.
+    - name: ssc-auth-secret
+      value: "ssc-credentials"
+    - name: client-auth-token-secret
+      value: "client-auth-token-secret"
