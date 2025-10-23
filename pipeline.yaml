@@ -1,0 +1,69 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: vulnado-pipeline
+spec:
+  description: |
+    Pipeline that automates security
+  params:
+    - name: repo-url
+      type: string
+      description: The Git repository URL.
+    - name: revision
+      type: string
+      description: Optional git revision (branch, tag, or commit).
+      default: "master"
+    - name: iq-server-url
+      type: string
+      description: The URL of the Sonatype Nexus IQ Server.
+      default: "http://34.18.141.239:8070/"
+    - name: iq-application-id
+      type: string
+      description: The application ID in Nexus IQ Server.
+      default: "1"
+    - name: sonatype-auth-secret
+      type: string
+      description: The name of the Kubernetes secret containing Sonatype credentials.
+      default: "sca-credentials"
+  workspaces:
+    - name: shared-data
+      description: Workspace for the cloned repo.
+  tasks:
+    - name: fetch-source
+      taskRef:
+        name: git-clone-restricted
+      serviceAccountName: tekton-build-sa
+      workspaces:
+        - name: output
+          workspace: shared-data
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+    - name: build
+      taskRef:
+        name: build
+      serviceAccountName: tekton-build-sa
+      runAfter:
+        - fetch-source
+      workspaces:
+        - name: source
+          workspace: shared-data
+    - name: sonatype-scan
+      taskRef:
+        name: sonatype-scan
+      runAfter:
+        - build
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: reports
+          workspace: shared-data
+      params:
+        - name: iq-server-url
+          value: $(params.iq-server-url)
+        - name: iq-application-id
+          value: $(params.iq-application-id)
+        - name: sonatype-auth-secret
+          value: $(params.sonatype-auth-secret)

@@ -1,0 +1,40 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-clone-restricted
+spec:
+  description: |
+    Task to clone a Git repository into a workspace.
+  params:
+    - name: url
+      type: string
+      description: The Git repository URL.
+    - name: revision
+      type: string
+      description: Optional git revision (branch, tag, or commit).
+      default: "main"
+  workspaces:
+    - name: output
+      description: Workspace to store the cloned source code.
+  steps:
+    - name: clone
+      image: alpine/git:latest
+      script: |
+        #!/bin/sh
+        set -e
+        cd $(workspaces.output.path)
+        echo "[INFO] Initializing git repository..."
+        rm -rf .git
+        git init
+        echo "[INFO] Fetching repository $(params.url)..."
+        git remote add origin $(params.url)
+        git fetch origin master
+        git reset --hard origin/master
+        echo "[INFO] Repository cloned successfully to $(workspaces.output.path)"
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile:
+          type: RuntimeDefault
+

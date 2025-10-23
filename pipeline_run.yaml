@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: clone-read-run-
+spec:
+  pipelineRef:
+    name: vulnado-pipeline
+  podTemplate:
+    container:
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        capabilities:
+          drop:
+            - "ALL"
+        seccompProfile:
+          type: RuntimeDefault
+  workspaces:
+    - name: shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+  params:
+    - name: repo-url
+      value: https://github.com/ScaleSec/vulnado.git
+    - name: revision
+      value: master
+    - name: iq-server-url
+      value: "http://34.18.141.239:8070/"
+    - name: iq-application-id
+      value: "1"
+    - name: sonatype-auth-secret
+      value: "sca-credentials"
