@@ -16,7 +16,7 @@ spec:
         #!/bin/sh
         set -e
         mkdir -p $(workspaces.source.path)/.m2
-        cd $(workspaces.source.path)
+        cd "$(workspaces.source.path)"
         mvn -Dmaven.repo.local=$(workspaces.source.path)/.m2/repository clean package
       securityContext:
         allowPrivilegeEscalation: false

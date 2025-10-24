@@ -90,7 +90,7 @@ spec:
       taskRef:
         name: sast
       runAfter: 
-        - fetch-source
+        - sonatype-scan
       workspaces:
         - name: source
           workspace: shared-data

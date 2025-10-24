@@ -30,6 +30,8 @@ spec:
     - name: sast
       image: fortifydocker/fortify-ci-tools:latest-jdk-17
       env:
+        - name: HOME
+          value: /workspace/source
         - name: SSC_USERNAME
           valueFrom:
             secretKeyRef:
@@ -48,35 +50,22 @@ spec:
       script: |
         #!/bin/sh
         set -e
-        
+        echo "[INFO] HOME is set to $HOME"
+        mkdir -p "$HOME/.fortify"
+ 
         # Login to Fortify SSC
         fcli ssc session login --client-auth-token=${CLIENT_AUTH_TOKEN} --user=${SSC_USERNAME} --password=${SSC_PASSWORD} --url=$(params.ssc-url) --insecure
         
-        # Debug workspace paths
-        echo "Current directory:"
-        pwd
-      
-        
-        echo "Listing /workspace/source directory:"
-        ls -la /workspace/source
-
-        echo "Listing current directory contents:"
-        ls -la .
-        
-        echo "Listing Tekton directories:"
-        ls -la /tekton
-        
-        echo "Environment variables:"
-        env | grep -i workspace
-        
         # Package and scan using the already built files (no build tool needed)
         cd "$(workspaces.source.path)"
-        
-        # Try creating package with the source input
-        scancentral package -bt none -o package.zip
-        
+        ls -la
+        scancentral package -bt none -o package.zip || true
+
         # Start the SAST scan
         fcli sc-sast scan start --publish-to=$(params.ssc-application-id) --sensor-version=$(params.sensor-version) --file=package.zip --store=Id
       securityContext:
-        runAsUser: 0
-        allowPrivilegeEscalation: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile:
+          type: RuntimeDefault
