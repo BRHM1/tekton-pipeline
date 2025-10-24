@@ -50,8 +50,8 @@ spec:
       script: |
         #!/bin/sh
         set -e
-        echo "[INFO] HOME is set to $HOME"
-        mkdir -p "$HOME/.fortify"
+        # echo "[INFO] HOME is set to $HOME"
+        # mkdir -p "$HOME/.fortify"
  
         # Login to Fortify SSC
         fcli ssc session login --client-auth-token=${CLIENT_AUTH_TOKEN} --user=${SSC_USERNAME} --password=${SSC_PASSWORD} --url=$(params.ssc-url) --insecure
