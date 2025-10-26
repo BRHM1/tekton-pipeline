@@ -137,6 +137,14 @@ spec:
           value: $(params.ssc-auth-secret)
         - name: client-auth-token-secret
           value: $(params.client-auth-token-secret)
+    - name: hadolint-scan
+      taskRef:
+        name: hadolint-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      runAfter:
+        - fetch-source
     - name: build-docker-image
       taskRef:
         name: build-docker-image
@@ -193,6 +201,3 @@ spec:
           value: latest
         - name: exit-on-critical
           value: "false"
-
-
-
