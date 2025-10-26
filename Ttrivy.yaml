@@ -1,0 +1,53 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: trivy-image-scan
+spec:
+  workspaces:
+    - name: scan-data
+      description: Shared workspace for scan output
+  params:
+    - name: imagestream-name
+      type: string
+    - name: imagestream-tag
+      type: string
+      default: latest
+    - name: exit-on-critical
+      type: string
+      default: "false"
+  steps:
+    - name: get-image-ref
+      image: quay.io/openshift/origin-cli:4.13
+      script: |
+        #!/bin/sh
+        IMAGE=$(oc get is $(params.imagestream-name) -o jsonpath='{.status.tags[?(@.tag=="$(params.imagestream-tag)")].items[0].dockerImageReference}')
+        echo "$IMAGE" > "$(workspaces.scan-data.path)/image-ref"
+        echo "Resolved image: $(cat $(workspaces.scan-data.path)/image-ref)"
+
+    - name: trivy-scan
+      image: docker.io/aquasec/trivy:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        IMAGE=$(cat $(workspaces.scan-data.path)/image-ref)
+        echo "Scanning image: $IMAGE"
+
+        # Download database (required for first run)
+        trivy image --download-db-only
+
+        # Perform the scan
+        trivy image --insecure --format table "$IMAGE" > "$(workspaces.scan-data.path)/trivy-results.txt"
+        cat "$(workspaces.scan-data.path)/trivy-results.txt"
+
+        # Fail pipeline if critical vulnerabilities
+        if [ "$(params.exit-on-critical)" = "true" ]; then
+          CRITICALS=$(grep -c "CRITICAL" "$(workspaces.scan-data.path)/trivy-results.txt" || true)
+          if [ "$CRITICALS" -gt 0 ]; then
+            echo "❌ Critical vulnerabilities found"
+            exit 1
+          fi
+        fi
+
+        echo "✅ Trivy scan completed successfully"
+

@@ -9,6 +9,8 @@ spec:
   taskRunSpecs:
     - pipelineTaskName: build-docker-oc
       serviceAccountName: image-builder-sa
+    - pipelineTaskName: trivy-image-scan
+      serviceAccountName: image-builder-sa
   podTemplate:
     container:
       securityContext:

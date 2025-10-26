@@ -58,7 +58,11 @@ spec:
     - name: run-docker-1
       type: string
       description: Flag to determine whether to run the Docker 1.4 scan.
-      default: "true"
+      default: "false"
+    - name: run-docker-2
+      type: string
+      description: Flag to determine whether to run the Docker 2.0 scan.
+      default: "false"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -159,6 +163,10 @@ spec:
         name: vulnado-build-and-scan
       runAfter:
         - build-docker-image
+      when:
+        - input: "$(params.run-docker-2)"
+          operator: in
+          values: ["true"]
       serviceAccountName: image-builder-sa
       workspaces:
         - name: source
@@ -170,3 +178,21 @@ spec:
           value: vulnado-image-stream
         - name: imagestream-tag
           value: latest
+    - name: trivy-image-scan
+      taskRef:
+        name: trivy-image-scan
+      workspaces:
+        - name: scan-data
+          workspace: shared-data
+      runAfter:
+        - build-docker-oc
+      params:
+        - name: imagestream-name
+          value: vulnado-image-stream
+        - name: imagestream-tag
+          value: latest
+        - name: exit-on-critical
+          value: "false"
+
+
+
