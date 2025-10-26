@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  generateName: clone-read-run-
+  generateName: pipeline-run-
 spec:
   pipelineRef:
     name: vulnado-pipeline

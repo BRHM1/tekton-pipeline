@@ -43,6 +43,18 @@ spec:
       type: string
       description: The name of the Kubernetes secret containing Client Auth Token credentials.
       default: "client-auth-token-secret"
+    - name: run-sast-scan
+      type: string
+      description: Flag to determine whether to run the SAST scan.
+      default: "false"
+    - name: run-sca-scan
+      type: string
+      description: Flag to determine whether to run the SAST scan.
+      default: "false"
+    - name: run-build
+      type: string
+      description: Flag to determine whether to run the SAST scan.
+      default: "false"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -63,6 +75,10 @@ spec:
       onError: continue
       taskRef:
         name: build
+      when:
+        - input: "$(params.run-build)"
+          operator: in
+          values: ["true"]
       serviceAccountName: tekton-build-sa
       runAfter:
         - fetch-source
@@ -74,6 +90,10 @@ spec:
         name: sonatype-scan
       runAfter:
         - build
+      when:
+        - input: "$(params.run-sca-scan)"
+          operator: in
+          values: ["true"]
       workspaces:
         - name: source
           workspace: shared-data
@@ -91,6 +111,10 @@ spec:
         name: sast
       runAfter: 
         - sonatype-scan
+      when:
+        - input: "$(params.run-sast-scan)"
+          operator: in
+          values: ["true"]
       workspaces:
         - name: source
           workspace: shared-data
@@ -105,4 +129,20 @@ spec:
           value: $(params.ssc-auth-secret)
         - name: client-auth-token-secret
           value: $(params.client-auth-token-secret)
-
+    - name: build-docker-image
+      taskRef:
+        name: build-docker-image
+      runAfter:
+        - sast-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: image-name
+          value: vulnado-app
+        - name: dockerfile-path
+          value: ./Dockerfile
+        - name: context-path
+          value: .
+        - name: image-tag
+          value: latest
