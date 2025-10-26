@@ -55,6 +55,10 @@ spec:
       type: string
       description: Flag to determine whether to run the SAST scan.
       default: "false"
+    - name: run-docker-1
+      type: string
+      description: Flag to determine whether to run the Docker 1.4 scan.
+      default: "true"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -132,6 +136,10 @@ spec:
     - name: build-docker-image
       taskRef:
         name: build-docker-image
+      when:
+        - input: "$(params.run-docker-1)"
+          operator: in
+          values: ["true"]
       runAfter:
         - sast-scan
       workspaces:
@@ -145,4 +153,20 @@ spec:
         - name: context-path
           value: .
         - name: image-tag
+          value: latest
+    - name: build-docker-oc
+      taskRef:
+        name: vulnado-build-and-scan
+      runAfter:
+        - build-docker-image
+      serviceAccountName: image-builder-sa
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: buildconfig-name
+          value: vulnado-build-config
+        - name: imagestream-name
+          value: vulnado-image-stream
+        - name: imagestream-tag
           value: latest

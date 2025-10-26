@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: vulnado-build-and-scan
+spec:
+  workspaces:
+    - name: source
+      description: The workspace containing the source code.
+  params:
+    - name: buildconfig-name
+      default: vulnado-build-config
+  steps:
+    - name: start-build
+      image: quay.io/openshift/origin-cli:4.13
+      script: |
+        #!/bin/sh
+        echo "Starting OpenShift build..."
+        oc start-build $(params.buildconfig-name) --follow

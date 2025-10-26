@@ -1,0 +1,23 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: vulnado-build-config
+spec:
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/ScaleSec/vulnado.git'
+      ref: 'master'
+    contextDir: '.'
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: 'Dockerfile'
+  output:
+    to:
+      kind: ImageStreamTag  
+      name: 'vulnado-image-stream:latest'
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+  runPolicy: Serial

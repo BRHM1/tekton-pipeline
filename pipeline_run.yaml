@@ -1,18 +1,21 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  generateName: pipeline-run-
+  generateName: vulnado-pipeline-run-
 spec:
   pipelineRef:
     name: vulnado-pipeline
+  serviceAccountName: tekton-build-sa
+  taskRunSpecs:
+    - pipelineTaskName: build-docker-oc
+      serviceAccountName: image-builder-sa
   podTemplate:
     container:
       securityContext:
         allowPrivilegeEscalation: false
         runAsNonRoot: true
         capabilities:
-          drop:
-            - "ALL"
+          drop: ["ALL"]
         seccompProfile:
           type: RuntimeDefault
   workspaces:
@@ -40,7 +43,6 @@ spec:
       value: "10001"
     - name: sensor-version
       value: "25.2"
-      description: The version of the Fortify SAST sensor to use.
     - name: ssc-auth-secret
       value: "ssc-credentials"
     - name: client-auth-token-secret
