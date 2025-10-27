@@ -63,6 +63,14 @@ spec:
       type: string
       description: Flag to determine whether to run the Docker 2.0 scan.
       default: "false"
+    - name: run-hadolint-scan
+      type: string
+      description: Flag to determine whether to run the Hadolint scan.
+      default: "false"
+    - name: run-trivy-scan
+      type: string
+      description: Flag to determine whether to run the Trivy image scan.
+      default: "false"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -143,6 +151,10 @@ spec:
       workspaces:
         - name: source
           workspace: shared-data
+      when:
+        - input: "$(params.run-hadolint-scan)"
+          operator: in
+          values: ["true"]
       runAfter:
         - fetch-source
     - name: build-docker-image
@@ -194,6 +206,10 @@ spec:
           workspace: shared-data
       runAfter:
         - build-docker-oc
+      when:
+        - input: "$(params.run-trivy-scan)"
+          operator: in
+          values: ["true"]
       params:
         - name: imagestream-name
           value: vulnado-image-stream
@@ -201,3 +217,16 @@ spec:
           value: latest
         - name: exit-on-critical
           value: "false"
+    - name: vulnado-anchore-scan
+      taskRef:
+        name: vulnado-anchore-scan
+      workspaces:
+        - name: scan-data
+          workspace: shared-data
+      runAfter:
+        - fetch-source
+      params:
+        - name: imagestream-name
+          value: vulnado-image-stream
+        - name: imagestream-tag
+          value: latest

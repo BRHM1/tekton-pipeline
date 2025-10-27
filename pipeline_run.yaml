@@ -11,6 +11,8 @@ spec:
       serviceAccountName: image-builder-sa
     - pipelineTaskName: trivy-image-scan
       serviceAccountName: image-builder-sa
+    - pipelineTaskName: vulnado-anchore-scan
+      serviceAccountName: image-builder-sa
   podTemplate:
     container:
       securityContext:
