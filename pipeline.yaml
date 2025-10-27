@@ -217,12 +217,9 @@ spec:
           value: latest
         - name: exit-on-critical
           value: "false"
-    - name: vulnado-anchore-scan
+    - name: resolve
       taskRef:
-        name: vulnado-anchore-scan
-      workspaces:
-        - name: scan-data
-          workspace: shared-data
+        name: resolve
       runAfter:
         - fetch-source
       params:
@@ -230,3 +227,11 @@ spec:
           value: vulnado-image-stream
         - name: imagestream-tag
           value: latest
+    - name: vulnado-anchore-scan
+      taskRef:
+        name: vulnado-anchore-scan
+      runAfter:
+        - resolve
+      params:
+        - name: image
+          value: "$(tasks.resolve.results.image-ref)"

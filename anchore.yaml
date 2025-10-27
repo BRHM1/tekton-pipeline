@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: vulnado-anchore-scan
+  name: resolve
 spec:
   params:
     - name: imagestream-name
@@ -9,17 +9,10 @@ spec:
     - name: imagestream-tag
       type: string
       default: latest
-
-  workspaces:
-    - name: scan-data
-
   results:
     - name: image-ref
       description: Image reference resolved from ImageStream
-
   steps:
-
-    # STEP 1: Resolve image reference and write Result
     - name: get-image-ref
       image: quay.io/openshift/origin-cli:4.13
       script: |
@@ -30,14 +23,3 @@ spec:
         echo -n "$IMAGE" > "$(results.image-ref.path)"
         echo "results = $(results.image-ref.path)"
         echo "[INFO] Resolved image: $IMAGE"
-
-    # STEP 2: Use ENTRYPOINT=grype with args only (your request)
-    - name: anchore-grype
-      image: anchore/grype:v0.102.0
-      env:
-        - name: GRYPE_REGISTRY_INSECURE_SKIP_TLS_VERIFY
-          value: "true"
-      args:
-        - "-o"
-        - "table"
-        - "image-registry.openshift-image-registry.svc:5000/default/vulnado-image-stream@sha256:b5e19a034eb0136c8bf83d9e46240de3e1bb3c3f29f13cff894346289a96792a"

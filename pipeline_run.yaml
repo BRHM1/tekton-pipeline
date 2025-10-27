@@ -13,6 +13,8 @@ spec:
       serviceAccountName: image-builder-sa
     - pipelineTaskName: vulnado-anchore-scan
       serviceAccountName: image-builder-sa
+    - pipelineTaskName: resolve
+      serviceAccountName: image-builder-sa
   podTemplate:
     container:
       securityContext:

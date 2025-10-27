@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: vulnado-anchore-scan
+spec:
+  params:
+    - name: image
+      type: string
+  steps:
+    - name: anchore-grype
+      image: anchore/grype:v0.102.0
+      env:
+        - name: GRYPE_REGISTRY_INSECURE_SKIP_TLS_VERIFY
+          value: "true"
+        - name: IMAGE_REF
+          value: "$(params.image)"
+      args:
+        - "-o"
+        - "table"
+        - "$(params.image)"
