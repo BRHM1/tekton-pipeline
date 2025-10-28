@@ -1,0 +1,186 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kube-bench
+spec:
+  description: |
+    This task triggers a kube-bench CIS Kubernetes benchmark scan by creating a Job.
+    It first cleans up any existing kube-bench job and then creates a new one.
+  params:
+  - name: benchmark
+    type: string
+    description: The benchmark to run (e.g., rh-1.0 for OpenShift)
+    default: "rh-1.0"
+  - name: image
+    type: string
+    description: The kube-bench container image to use
+    default: "docker.io/aquasec/kube-bench:v0.13.0-ubi-fips"
+  results:
+  - name: job-name
+    description: The name of the kube-bench job created
+  steps:
+  - name: cleanup-existing-job
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    script: |
+      #!/bin/bash
+      set -e
+      echo "Cleaning up any existing kube-bench job..."
+      oc delete job kube-bench --ignore-not-found
+      echo "Cleanup complete."
+  
+  - name: create-job
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    script: |
+      #!/bin/bash
+      set -e
+      
+      echo "Creating kube-bench job..."
+      
+      cat <<EOF | oc apply -f -
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: kube-bench
+      spec:
+        backoffLimit: 0
+        template:
+          metadata:
+            labels:
+              job-name: kube-bench
+          spec:
+            restartPolicy: Never
+            hostPID: true
+            serviceAccountName: kube-bench
+            containers:
+            - name: kube-bench
+              image: $(params.image)
+              command: ["/usr/local/bin/kube-bench", "--benchmark", "$(params.benchmark)"]
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              env:
+              - name: PATH
+                value: "/usr/local/mount-from-host/bin:\${PATH}"
+              volumeMounts:
+              - name: etc-kubernetes
+                mountPath: /etc/kubernetes
+                readOnly: true
+              - name: etc-systemd
+                mountPath: /etc/systemd
+                readOnly: true
+              - name: lib-systemd
+                mountPath: /lib/systemd
+                readOnly: true
+              - name: usr-bin
+                mountPath: /usr/local/mount-from-host/bin
+                readOnly: true
+              - name: var-lib-kubelet
+                mountPath: /var/lib/kubelet
+                readOnly: true
+              - name: var-lib-etcd
+                mountPath: /var/lib/etcd
+                readOnly: true
+              - name: var-lib-cni
+                mountPath: /var/lib/cni
+                readOnly: true
+              - name: etc-cni-netd
+                mountPath: /etc/cni/net.d
+                readOnly: true
+            volumes:
+            - name: etc-kubernetes
+              hostPath:
+                path: /etc/kubernetes
+                type: DirectoryOrCreate
+            - name: etc-systemd
+              hostPath:
+                path: /etc/systemd
+                type: DirectoryOrCreate
+            - name: lib-systemd
+              hostPath:
+                path: /lib/systemd
+                type: DirectoryOrCreate
+            - name: usr-bin
+              hostPath:
+                path: /usr/bin
+                type: Directory
+            - name: var-lib-kubelet
+              hostPath:
+                path: /var/lib/kubelet
+                type: DirectoryOrCreate
+            - name: var-lib-etcd
+              hostPath:
+                path: /var/lib/etcd
+                type: DirectoryOrCreate
+            - name: var-lib-cni
+              hostPath:
+                path: /var/lib/cni
+                type: DirectoryOrCreate
+            - name: etc-cni-netd
+              hostPath:
+                path: /etc/cni/net.d
+                type: DirectoryOrCreate
+      EOF
+      
+      echo "kube-bench" > $(results.job-name.path)
+      echo "Job created successfully!"
+  
+  - name: wait-for-job
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    script: |
+      #!/bin/bash
+      set -e
+      
+      echo "Waiting for kube-bench job to complete..."
+      
+      # Wait for job to complete (timeout after 5 minutes)
+      timeout=300
+      elapsed=0
+      
+      while [ $elapsed -lt $timeout ]; do
+        status=$(oc get job kube-bench -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "")
+        failed=$(oc get job kube-bench -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || echo "")
+        
+        if [ "$status" == "True" ]; then
+          echo "Job completed successfully!"
+          break
+        elif [ "$failed" == "True" ]; then
+          echo "Job failed!"
+          exit 1
+        fi
+        
+        echo "Job still running... ($elapsed seconds elapsed)"
+        sleep 10
+        elapsed=$((elapsed + 10))
+      done
+      
+      if [ $elapsed -ge $timeout ]; then
+        echo "Job timed out after $timeout seconds"
+        exit 1
+      fi
+  
+  - name: get-results
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    script: |
+      #!/bin/bash
+      set -e
+      
+      echo "Fetching kube-bench results..."
+      echo "================================"
+      
+      # Get the pod name
+      POD_NAME=$(oc get pods -l job-name=kube-bench -o jsonpath='{.items[0].metadata.name}')
+      
+      if [ -z "$POD_NAME" ]; then
+        echo "Error: Could not find kube-bench pod"
+        exit 1
+      fi
+      
+      echo "Pod: $POD_NAME"
+      echo ""
+      
+      # Get the logs (results)
+      oc logs $POD_NAME
+      
+      echo ""
+      echo "================================"
+      echo "Kube-bench scan completed!"

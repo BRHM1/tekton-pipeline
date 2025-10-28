@@ -71,11 +71,16 @@ spec:
       type: string
       description: Flag to determine whether to run the Trivy image scan.
       default: "false"
+    - name: run-kube-bench
+      type: string
+      description: Flag to determine whether to run the kube-bench CIS Kubernetes benchmark scan.
+      default: "true"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
   tasks:
     - name: fetch-source
+      displayName: "Checkout Source Code"
       taskRef:
         name: git-clone-restricted
       serviceAccountName: tekton-build-sa
@@ -89,6 +94,7 @@ spec:
           value: $(params.revision)
     - name: build
       onError: continue
+      displayName: "Build Application"
       taskRef:
         name: build
       when:
@@ -102,6 +108,7 @@ spec:
         - name: source
           workspace: shared-data
     - name: sonatype-scan
+      displayName: "Sonatype SCA Scan"
       taskRef:
         name: sonatype-scan
       runAfter:
@@ -123,6 +130,7 @@ spec:
         - name: sonatype-auth-secret
           value: $(params.sonatype-auth-secret)
     - name: sast-scan
+      displayName: "SAST Scan"
       taskRef:
         name: sast
       runAfter: 
@@ -146,6 +154,7 @@ spec:
         - name: client-auth-token-secret
           value: $(params.client-auth-token-secret)
     - name: hadolint-scan
+      displayName: "Dockerfile Scan - Hadolint"
       taskRef:
         name: hadolint-scan
       workspaces:
@@ -158,6 +167,7 @@ spec:
       runAfter:
         - fetch-source
     - name: build-docker-image
+      displayName: "Build Docker Image - Buildah"
       taskRef:
         name: build-docker-image
       when:
@@ -179,6 +189,7 @@ spec:
         - name: image-tag
           value: latest
     - name: build-docker-oc
+      displayName: "Build Docker Image - OpenShift Workflow"
       taskRef:
         name: vulnado-build-and-scan
       runAfter:
@@ -199,6 +210,7 @@ spec:
         - name: imagestream-tag
           value: latest
     - name: trivy-image-scan
+      displayName: "Trivy Image Scan"
       taskRef:
         name: trivy-image-scan
       workspaces:
@@ -218,6 +230,7 @@ spec:
         - name: exit-on-critical
           value: "false"
     - name: resolve
+      displayName: "Resolve Image Reference"
       taskRef:
         name: resolve
       runAfter:
@@ -228,6 +241,7 @@ spec:
         - name: imagestream-tag
           value: latest
     - name: vulnado-anchore-scan
+      displayName: "Anchore Image Scan"
       taskRef:
         name: vulnado-anchore-scan
       runAfter:
@@ -235,3 +249,19 @@ spec:
       params:
         - name: image
           value: "$(tasks.resolve.results.image-ref)"
+    - name: kube-bench
+      displayName: "CIS Kubernetes Benchmark Scan"
+      taskRef:
+        name: kube-bench
+      when:
+        - input: "$(params.run-kube-bench)"
+          operator: in
+          values: ["true"]
+      runAfter:
+        - fetch-source
+      params:
+        - name: benchmark
+          value: "rh-1.0"
+        - name: image
+          value: "docker.io/aquasec/kube-bench:v0.13.0-ubi-fips"
+    

@@ -12,8 +12,6 @@ spec:
       env:
         - name: GRYPE_REGISTRY_INSECURE_SKIP_TLS_VERIFY
           value: "true"
-        - name: IMAGE_REF
-          value: "$(params.image)"
       args:
         - "-o"
         - "table"

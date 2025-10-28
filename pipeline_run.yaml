@@ -15,6 +15,8 @@ spec:
       serviceAccountName: image-builder-sa
     - pipelineTaskName: resolve
       serviceAccountName: image-builder-sa
+    - pipelineTaskName: kube-bench
+      serviceAccountName: kube-bench
   podTemplate:
     container:
       securityContext:

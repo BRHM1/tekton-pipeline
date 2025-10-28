@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubebench
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-bench
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-bench
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - nodes
+  - services
+  - configmaps
+  - secrets
+  - endpoints
+  - serviceaccounts
+  verbs: ["get", "list"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  - replicasets
+  verbs: ["get", "list"]
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: ["get", "list"]
+- apiGroups: ["operator.openshift.io"]
+  resources:
+  - kubeapiservers
+  - openshiftapiservers
+  verbs: ["get", "list"]
+- apiGroups: ["config.openshift.io"]
+  resources:
+  - clusteroperators
+  - clusterversions
+  verbs: ["get", "list"]
+- apiGroups: ["security.openshift.io"]
+  resources:
+  - securitycontextconstraints
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["get", "list"]
+- apiGroups: ["policy"]
+  resources:
+  - podsecuritypolicies
+  verbs: ["get", "list"]
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-bench
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-bench
+subjects:
+- kind: ServiceAccount
+  name: kube-bench
+  namespace: default
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kube-bench
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        job-name: kube-bench
+    spec:
+      restartPolicy: Never
+      hostPID: true
+      serviceAccountName: kube-bench
+      containers:
+      - name: kube-bench
+        image: docker.io/aquasec/kube-bench:v0.13.0-ubi-fips
+        command: ["/usr/local/bin/kube-bench", "--benchmark", "rh-1.0"]
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        env:
+        - name: PATH
+          value: "/usr/local/mount-from-host/bin:${PATH}"
+        volumeMounts:
+        - name: etc-kubernetes
+          mountPath: /etc/kubernetes
+          readOnly: true
+        - name: etc-systemd
+          mountPath: /etc/systemd
+          readOnly: true
+        - name: lib-systemd
+          mountPath: /lib/systemd
+          readOnly: true
+        - name: usr-bin
+          mountPath: /usr/local/mount-from-host/bin
+          readOnly: true
+        - name: var-lib-kubelet
+          mountPath: /var/lib/kubelet
+          readOnly: true
+        - name: var-lib-etcd
+          mountPath: /var/lib/etcd
+          readOnly: true
+        - name: var-lib-cni
+          mountPath: /var/lib/cni
+          readOnly: true
+        - name: etc-cni-netd
+          mountPath: /etc/cni/net.d
+          readOnly: true
+      volumes:
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes
+          type: DirectoryOrCreate
+      - name: etc-systemd
+        hostPath:
+          path: /etc/systemd
+          type: DirectoryOrCreate
+      - name: lib-systemd
+        hostPath:
+          path: /lib/systemd
+          type: DirectoryOrCreate
+      - name: usr-bin
+        hostPath:
+          path: /usr/bin
+          type: Directory
+      - name: var-lib-kubelet
+        hostPath:
+          path: /var/lib/kubelet
+          type: DirectoryOrCreate
+      - name: var-lib-etcd
+        hostPath:
+          path: /var/lib/etcd
+          type: DirectoryOrCreate
+      - name: var-lib-cni
+        hostPath:
+          path: /var/lib/cni
+          type: DirectoryOrCreate
+      - name: etc-cni-netd
+        hostPath:
+          path: /etc/cni/net.d
+          type: DirectoryOrCreate
