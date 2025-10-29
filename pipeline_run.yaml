@@ -55,3 +55,11 @@ spec:
       value: "ssc-credentials"
     - name: client-auth-token-secret
       value: "client-auth-token-secret"
+    - name: target-url
+      value: "http://vulnado-app:8080"
+    - name: scan-name
+      value: "Pipeline-DAST-Scan"
+    - name: scan-settings-id
+      value: "9f4a36ec-c4c3-452b-98aa-25094eeeab8a"
+    - name: scan-mode
+      value: "CrawlAndAudit"

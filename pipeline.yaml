@@ -74,7 +74,30 @@ spec:
     - name: run-kube-bench
       type: string
       description: Flag to determine whether to run the kube-bench CIS Kubernetes benchmark scan.
-      default: "true"
+      default: "false"
+    - name: run-dast-scan
+      type: string
+      description: Flag to determine whether to run the DAST scan.
+      default: "false"
+    - name: run-anchorer-scan
+      type: string
+      description: Flag to determine whether to run the Anchore image scan.
+      default: "false"
+    - name: target-url
+      type: string
+      description: The target URL to scan
+    - name: scan-name
+      type: string
+      description: The name for the DAST scan
+      default: "Pipeline-DAST-Scan"
+    - name: scan-settings-id
+      type: string
+      description: The scan settings CI/CD token or ID
+      default: "ssc-credentials"
+    - name: scan-mode
+      type: string
+      description: Scan mode (CrawlOnly, CrawlAndAudit, AuditOnly)
+      default: "CrawlAndAudit"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -244,6 +267,10 @@ spec:
       displayName: "Anchore Image Scan"
       taskRef:
         name: vulnado-anchore-scan
+      when:
+        - input: "$(params.run-anchorer-scan)"
+          operator: in
+          values: ["true"]  
       runAfter:
         - resolve
       params:
@@ -264,4 +291,46 @@ spec:
           value: "rh-1.0"
         - name: image
           value: "docker.io/aquasec/kube-bench:v0.13.0-ubi-fips"
-    
+    - name: dast-scan
+      displayName: "DAST Scan"
+      taskRef:
+        name: dast
+      when:
+        - input: "$(params.run-dast-scan)"
+          operator: in
+          values: ["true"]
+      runAfter:
+        - fetch-source
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: target-url
+          value: $(params.target-url)
+        - name: scan-name
+          value: $(params.scan-name)
+        - name: scan-settings-id
+          value: $(params.scan-settings-id)
+        - name: ssc-url
+          value: $(params.ssc-url)
+        - name: ssc-auth-secret
+          value: $(params.ssc-auth-secret)
+        - name: scan-mode
+          value: $(params.scan-mode)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
