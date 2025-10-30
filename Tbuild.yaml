@@ -13,11 +13,11 @@ spec:
       image: maven:3.9.5-eclipse-temurin-17
       onError: continue
       script: |
-        #!/bin/sh
+        #!/bin/bash
         set -e
         mkdir -p $(workspaces.source.path)/.m2
-        cd "$(workspaces.source.path)"
-        mvn -Dmaven.repo.local=$(workspaces.source.path)/.m2/repository clean package
+        cd $(workspaces.source.path)
+        mvn -Dmaven.repo.local=$(workspaces.source.path)/.m2/repository clean package -DskipTests
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:

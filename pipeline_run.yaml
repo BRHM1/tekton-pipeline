@@ -36,7 +36,7 @@ spec:
               storage: 1Gi
   params:
     - name: repo-url
-      value: https://github.com/ScaleSec/vulnado.git
+      value: https://github.com/ved-asole/eKart-ecommerce-backend.git
     - name: revision
       value: master
     - name: iq-server-url

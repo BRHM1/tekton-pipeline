@@ -50,11 +50,11 @@ spec:
     - name: run-sca-scan
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "false"
+      default: "true"
     - name: run-build
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "false"
+      default: "true"
     - name: run-docker-1
       type: string
       description: Flag to determine whether to run the Docker 1.4 scan.
@@ -62,19 +62,19 @@ spec:
     - name: run-docker-2
       type: string
       description: Flag to determine whether to run the Docker 2.0 scan.
-      default: "false"
+      default: "true"
     - name: run-hadolint-scan
       type: string
       description: Flag to determine whether to run the Hadolint scan.
-      default: "false"
+      default: "true"
     - name: run-trivy-scan
       type: string
       description: Flag to determine whether to run the Trivy image scan.
-      default: "false"
+      default: "true"
     - name: run-kube-bench
       type: string
       description: Flag to determine whether to run the kube-bench CIS Kubernetes benchmark scan.
-      default: "false"
+      default: "true"
     - name: run-dast-scan
       type: string
       description: Flag to determine whether to run the DAST scan.
@@ -82,7 +82,7 @@ spec:
     - name: run-anchorer-scan
       type: string
       description: Flag to determine whether to run the Anchore image scan.
-      default: "false"
+      default: "true"
     - name: target-url
       type: string
       description: The target URL to scan
@@ -116,7 +116,6 @@ spec:
         - name: revision
           value: $(params.revision)
     - name: build
-      onError: continue
       displayName: "Build Application"
       taskRef:
         name: build
@@ -188,7 +187,7 @@ spec:
           operator: in
           values: ["true"]
       runAfter:
-        - fetch-source
+        - sast-scan
     - name: build-docker-image
       displayName: "Build Docker Image - Buildah"
       taskRef:
@@ -216,7 +215,7 @@ spec:
       taskRef:
         name: vulnado-build-and-scan
       runAfter:
-        - build-docker-image
+        - hadolint-scan
       when:
         - input: "$(params.run-docker-2)"
           operator: in
@@ -246,6 +245,8 @@ spec:
           operator: in
           values: ["true"]
       params:
+        - name: image-ref
+          value: "$(tasks.build-docker-oc.results.image-ref)"
         - name: imagestream-name
           value: vulnado-image-stream
         - name: imagestream-tag
@@ -258,6 +259,10 @@ spec:
         name: resolve
       runAfter:
         - fetch-source
+      when:
+        - input: "$(params.run-anchorer-scan)"
+          operator: in
+          values: ["true"]
       params:
         - name: imagestream-name
           value: vulnado-image-stream
@@ -275,7 +280,7 @@ spec:
         - resolve
       params:
         - name: image
-          value: "$(tasks.resolve.results.image-ref)"
+          value: "$(tasks.build-docker-oc.results.image-ref)"
     - name: kube-bench
       displayName: "CIS Kubernetes Benchmark Scan"
       taskRef:
@@ -285,7 +290,7 @@ spec:
           operator: in
           values: ["true"]
       runAfter:
-        - fetch-source
+        - vulnado-anchore-scan
       params:
         - name: benchmark
           value: "rh-1.0"

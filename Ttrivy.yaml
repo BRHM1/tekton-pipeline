@@ -7,6 +7,8 @@ spec:
     - name: scan-data
       description: Shared workspace for scan output
   params:
+    - name: image-ref
+      type: string
     - name: imagestream-name
       type: string
     - name: imagestream-tag
@@ -30,7 +32,7 @@ spec:
         #!/bin/sh
         set -e
 
-        IMAGE=$(cat $(workspaces.scan-data.path)/image-ref)
+        IMAGE=$(params.image-ref)
         echo "Scanning image: $IMAGE"
 
         # Download database (required for first run)

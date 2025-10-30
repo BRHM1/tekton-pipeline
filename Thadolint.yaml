@@ -22,4 +22,4 @@ spec:
         FILE=$(params.dockerfile-path)
         echo "[INFO] Running Hadolint on $FILE"
  
-        hadolint Dockerfile
+        hadolint "$FILE"

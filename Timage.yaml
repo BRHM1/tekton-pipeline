@@ -9,6 +9,13 @@ spec:
   params:
     - name: buildconfig-name
       default: vulnado-build-config
+    - name: imagestream-name
+      default: vulnado-image-stream
+    - name: imagestream-tag
+      default: latest
+  results:
+    - name: image-ref
+      description: The built image reference.
   steps:
     - name: start-build
       image: quay.io/openshift/origin-cli:4.13
@@ -16,3 +23,8 @@ spec:
         #!/bin/sh
         echo "Starting OpenShift build..."
         oc start-build $(params.buildconfig-name) --follow
+        IMAGE=$(oc get is $(params.imagestream-name) \
+          -o jsonpath="{.status.tags[?(@.tag=='$(params.imagestream-tag)')].items[0].dockerImageReference}")
+        echo -n "$IMAGE" > "$(results.image-ref.path)"
+        echo "results = $(results.image-ref.path)"
+        echo "[INFO] Resolved image: $IMAGE"
