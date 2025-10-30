@@ -98,6 +98,10 @@ spec:
       type: string
       description: Scan mode (CrawlOnly, CrawlAndAudit, AuditOnly)
       default: "CrawlAndAudit"
+    - name: manifest-repo-url
+      type: string
+      description: The Git repository URL for manifests.
+      default: "https://github.com/BRHM1/openshift-manifests.git"
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
@@ -296,6 +300,26 @@ spec:
           value: "rh-1.0"
         - name: image
           value: "docker.io/aquasec/kube-bench:v0.13.0-ubi-fips"
+    - name: update-image-tag
+      displayName: "Update Image Tag in Git"
+      taskRef:
+        name: k8s-update-image-tag
+      runAfter:
+        - build-docker-oc
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: git-repo-url
+          value: "$(params.manifest-repo-url)"
+        - name: git-branch
+          value: "main"
+        - name: git-credentials-secret
+          value: "git-credentials"
+        - name: image-tag
+          value: "$(tasks.build-docker-oc.results.image-ref)"
+        - name: build-id
+          value: "$(context.pipelineRun.name)"
     - name: dast-scan
       displayName: "DAST Scan"
       taskRef:
