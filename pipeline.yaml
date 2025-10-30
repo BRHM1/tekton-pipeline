@@ -50,11 +50,11 @@ spec:
     - name: run-sca-scan
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "true"
+      default: "false"
     - name: run-build
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "true"
+      default: "false"
     - name: run-docker-1
       type: string
       description: Flag to determine whether to run the Docker 1.4 scan.
@@ -70,11 +70,11 @@ spec:
     - name: run-trivy-scan
       type: string
       description: Flag to determine whether to run the Trivy image scan.
-      default: "true"
+      default: "false"
     - name: run-kube-bench
       type: string
       description: Flag to determine whether to run the kube-bench CIS Kubernetes benchmark scan.
-      default: "true"
+      default: "false"
     - name: run-dast-scan
       type: string
       description: Flag to determine whether to run the DAST scan.
@@ -82,7 +82,7 @@ spec:
     - name: run-anchorer-scan
       type: string
       description: Flag to determine whether to run the Anchore image scan.
-      default: "true"
+      default: "false"
     - name: target-url
       type: string
       description: The target URL to scan
