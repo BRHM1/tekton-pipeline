@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: git-clone-restricted
+  name: git-clone
 spec:
   description: |
     Task to clone a Git repository into a workspace.

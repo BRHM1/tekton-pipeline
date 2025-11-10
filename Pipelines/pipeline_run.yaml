@@ -1,19 +1,17 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  generateName: vulnado-pipeline-run-
+  generateName: appsec-pipeline-run-
 spec:
   pipelineRef:
-    name: vulnado-pipeline
+    name: appsec-pipeline
   serviceAccountName: tekton-build-sa
   taskRunSpecs:
-    - pipelineTaskName: build-docker-oc
+    - pipelineTaskName: build-docker-image
       serviceAccountName: image-builder-sa
     - pipelineTaskName: trivy-image-scan
       serviceAccountName: image-builder-sa
-    - pipelineTaskName: vulnado-anchore-scan
-      serviceAccountName: image-builder-sa
-    - pipelineTaskName: resolve
+    - pipelineTaskName: anchore-scan
       serviceAccountName: image-builder-sa
     - pipelineTaskName: kube-bench
       serviceAccountName: kube-bench
@@ -60,6 +58,6 @@ spec:
     - name: scan-name
       value: "Pipeline-DAST-Scan"
     - name: scan-settings-id
-      value: "9f4a36ec-c4c3-452b-98aa-25094eeeab8a"
+      value: "42acc24d-b28d-4e5c-abd7-3bc457299847"
     - name: scan-mode
       value: "CrawlAndAudit"

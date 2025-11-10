@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: vulnado-pipeline
+  name: appsec-pipeline
 spec:
   description: |
     Pipeline that automates security
@@ -46,15 +46,15 @@ spec:
     - name: run-sast-scan
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "false"
+      default: "true"
     - name: run-sca-scan
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "false"
+      default: "true"
     - name: run-build
       type: string
       description: Flag to determine whether to run the SAST scan.
-      default: "false"
+      default: "true"
     - name: run-docker-1
       type: string
       description: Flag to determine whether to run the Docker 1.4 scan.
@@ -70,7 +70,7 @@ spec:
     - name: run-trivy-scan
       type: string
       description: Flag to determine whether to run the Trivy image scan.
-      default: "false"
+      default: "true"
     - name: run-kube-bench
       type: string
       description: Flag to determine whether to run the kube-bench CIS Kubernetes benchmark scan.
@@ -78,11 +78,11 @@ spec:
     - name: run-dast-scan
       type: string
       description: Flag to determine whether to run the DAST scan.
-      default: "false"
-    - name: run-anchorer-scan
+      default: "true"
+    - name: run-anchore-scan
       type: string
       description: Flag to determine whether to run the Anchore image scan.
-      default: "false"
+      default: "true"
     - name: target-url
       type: string
       description: The target URL to scan
@@ -102,14 +102,18 @@ spec:
       type: string
       description: The Git repository URL for manifests.
       default: "https://github.com/BRHM1/openshift-manifests.git"
+    - name: run
+      type: array
+      description: List of Tasks to run
+      default: ["git-clone", "build-docker-image", "update-image-tag", "dast-scan"]
   workspaces:
     - name: shared-data
       description: Workspace for the cloned repo.
   tasks:
-    - name: fetch-source
+    - name: git-clone
       displayName: "Checkout Source Code"
       taskRef:
-        name: git-clone-restricted
+        name: git-clone
       serviceAccountName: tekton-build-sa
       workspaces:
         - name: output
@@ -124,12 +128,12 @@ spec:
       taskRef:
         name: build
       when:
-        - input: "$(params.run-build)"
+        - input: "build"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       serviceAccountName: tekton-build-sa
       runAfter:
-        - fetch-source
+        - git-clone
       workspaces:
         - name: source
           workspace: shared-data
@@ -140,9 +144,9 @@ spec:
       runAfter:
         - build
       when:
-        - input: "$(params.run-sca-scan)"
+        - input: "sonatype-scan"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       workspaces:
         - name: source
           workspace: shared-data
@@ -162,9 +166,9 @@ spec:
       runAfter: 
         - sonatype-scan
       when:
-        - input: "$(params.run-sast-scan)"
+        - input: "sast-scan"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       workspaces:
         - name: source
           workspace: shared-data
@@ -187,52 +191,30 @@ spec:
         - name: source
           workspace: shared-data
       when:
-        - input: "$(params.run-hadolint-scan)"
+        - input: "hadolint-scan"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       runAfter:
         - sast-scan
     - name: build-docker-image
-      displayName: "Build Docker Image - Buildah"
-      taskRef:
-        name: build-docker-image
-      when:
-        - input: "$(params.run-docker-1)"
-          operator: in
-          values: ["true"]
-      runAfter:
-        - sast-scan
-      workspaces:
-        - name: source
-          workspace: shared-data
-      params:
-        - name: image-name
-          value: vulnado-app
-        - name: dockerfile-path
-          value: ./Dockerfile
-        - name: context-path
-          value: .
-        - name: image-tag
-          value: latest
-    - name: build-docker-oc
       displayName: "Build Docker Image - OpenShift Workflow"
       taskRef:
-        name: vulnado-build-and-scan
+        name: build-docker-image
       runAfter:
         - hadolint-scan
       when:
-        - input: "$(params.run-docker-2)"
+        - input: "build-docker-image"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       serviceAccountName: image-builder-sa
       workspaces:
         - name: source
           workspace: shared-data
       params:
         - name: buildconfig-name
-          value: vulnado-build-config
+          value: build-config
         - name: imagestream-name
-          value: vulnado-image-stream
+          value: image-stream
         - name: imagestream-tag
           value: latest
     - name: trivy-image-scan
@@ -243,58 +225,39 @@ spec:
         - name: scan-data
           workspace: shared-data
       runAfter:
-        - build-docker-oc
+        - build-docker-image
       when:
-        - input: "$(params.run-trivy-scan)"
+        - input: "trivy-image-scan"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       params:
         - name: image-ref
-          value: "$(tasks.build-docker-oc.results.image-ref)"
-        - name: imagestream-name
-          value: vulnado-image-stream
-        - name: imagestream-tag
-          value: latest
+          value: "$(tasks.build-docker-image.results.image-ref)"
         - name: exit-on-critical
           value: "false"
-    - name: resolve
-      displayName: "Resolve Image Reference"
-      taskRef:
-        name: resolve
-      runAfter:
-        - fetch-source
-      when:
-        - input: "$(params.run-anchorer-scan)"
-          operator: in
-          values: ["true"]
-      params:
-        - name: imagestream-name
-          value: vulnado-image-stream
-        - name: imagestream-tag
-          value: latest
-    - name: vulnado-anchore-scan
+    - name: anchore-scan
       displayName: "Anchore Image Scan"
       taskRef:
-        name: vulnado-anchore-scan
+        name: anchore-scan
       when:
-        - input: "$(params.run-anchorer-scan)"
+        - input: "anchore-scan"
           operator: in
-          values: ["true"]  
+          values: ["$(params.run[*])"] 
       runAfter:
-        - resolve
+        - build-docker-image
       params:
         - name: image
-          value: "$(tasks.build-docker-oc.results.image-ref)"
+          value: "$(tasks.build-docker-image.results.image-ref)"
     - name: kube-bench
       displayName: "CIS Kubernetes Benchmark Scan"
       taskRef:
         name: kube-bench
       when:
-        - input: "$(params.run-kube-bench)"
+        - input: "kube-bench"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       runAfter:
-        - vulnado-anchore-scan
+        - anchore-scan
       params:
         - name: benchmark
           value: "rh-1.0"
@@ -305,10 +268,15 @@ spec:
       taskRef:
         name: k8s-update-image-tag
       runAfter:
-        - build-docker-oc
+        - trivy-image-scan
+        - anchore-scan
       workspaces:
         - name: source
           workspace: shared-data
+      when: 
+        - input: "update-image-tag"
+          operator: in
+          values: ["$(params.run[*])"]
       params:
         - name: git-repo-url
           value: "$(params.manifest-repo-url)"
@@ -317,7 +285,7 @@ spec:
         - name: git-credentials-secret
           value: "git-credentials"
         - name: image-tag
-          value: "$(tasks.build-docker-oc.results.image-ref)"
+          value: "$(tasks.build-docker-image.results.image-ref)"
         - name: build-id
           value: "$(context.pipelineRun.name)"
     - name: dast-scan
@@ -325,11 +293,11 @@ spec:
       taskRef:
         name: dast
       when:
-        - input: "$(params.run-dast-scan)"
+        - input: "dast-scan"
           operator: in
-          values: ["true"]
+          values: ["$(params.run[*])"]
       runAfter:
-        - fetch-source
+        - update-image-tag
       workspaces:
         - name: source
           workspace: shared-data

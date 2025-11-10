@@ -1,16 +1,16 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: vulnado-build-and-scan
+  name: build-docker-image
 spec:
   workspaces:
     - name: source
       description: The workspace containing the source code.
   params:
     - name: buildconfig-name
-      default: vulnado-build-config
+      default: build-config
     - name: imagestream-name
-      default: vulnado-image-stream
+      default: image-stream
     - name: imagestream-tag
       default: latest
   results:

@@ -55,12 +55,15 @@ spec:
         ls -la /workspace/source/openshift-manifests
     # STEP 2: Update backend.yaml with new image
     - name: update-backend-image-tag
-      image: alpine/git:latest
-      workingDir: /workspace/source/openshift-manifests
+      image: alpine/git:v2.49.1
+      workingDir: /workspace/source
       script: |
         #!/bin/sh
         set -eux
-        git checkout main
+        cd openshift-manifests
+        git checkout $(params.git-branch)
+        echo "Updating backend.yaml with new image tag..."
+        echo "$(params.build-id)"
         git checkout -b feature-$(params.build-id)
 
         # Replace the old image with the new one

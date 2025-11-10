@@ -9,23 +9,11 @@ spec:
   params:
     - name: image-ref
       type: string
-    - name: imagestream-name
-      type: string
-    - name: imagestream-tag
-      type: string
-      default: latest
+      default: "helloworld"
     - name: exit-on-critical
       type: string
-      default: "false"
+      default: "true"
   steps:
-    - name: get-image-ref
-      image: quay.io/openshift/origin-cli:4.13
-      script: |
-        #!/bin/sh
-        IMAGE=$(oc get is $(params.imagestream-name) -o jsonpath='{.status.tags[?(@.tag=="$(params.imagestream-tag)")].items[0].dockerImageReference}')
-        echo "$IMAGE" > "$(workspaces.scan-data.path)/image-ref"
-        echo "Resolved image: $(cat $(workspaces.scan-data.path)/image-ref)"
-
     - name: trivy-scan
       image: docker.io/aquasec/trivy:latest
       script: |

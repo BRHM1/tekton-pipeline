@@ -1,0 +1,100 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: k8s-update-image-tag
+spec:
+  description: >
+    Clone the manifests repository, update the backend.yaml image reference
+    with a provided OpenShift internal image tag, and push the changes securely.
+  params:
+    - name: git-repo-url
+      type: string
+      default: "https://github.com/BRHM1/openshift-manifests.git"
+    - name: git-branch
+      type: string
+      default: "main"
+    - name: build-id
+      type: string
+      description: Build ID for creating a feature branch
+    - name: git-credentials-secret
+      type: string
+      default: "git-credentials"
+    - name: image-tag
+      type: string
+      description: Full image reference to set in backend.yaml
+  workspaces:
+    - name: source
+      description: Workspace for the repository
+  steps:
+    # STEP 1: Clone repository
+    - name: clone
+      image: alpine/git:latest
+      workingDir: /workspace/source
+      env:
+        - name: GIT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: token
+        - name: GIT_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: email
+        - name: GIT_USER
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: username
+      script: |
+        #!/bin/sh
+        set -eux
+        git clone -b $(params.git-branch) https://${GIT_TOKEN}@$(echo $(params.git-repo-url) | sed 's|https://||')
+        ls -la /workspace/source
+        echo "Cloned repository to /workspace/source"
+        ls -la /workspace/source/openshift-manifests
+    # STEP 2: Update backend.yaml with new image
+    - name: update-backend-image-tag
+      image: alpine:3.18
+      workingDir: /workspace/source/openshift-manifests
+      script: |
+        #!/bin/sh
+        set -eux
+        git checkout main
+        git checkout -b feature-$(params.build-id)
+
+        # Replace the old image with the new one
+        sed -i "s|image: .*|image: $(params.image-tag)|g" backend.yaml
+
+        echo "Updated backend.yaml with image: $(params.image-tag)"
+
+    # STEP 3: Commit and push the change
+    - name: commit-and-push
+      image: alpine/git:latest
+      workingDir: /workspace/source/openshift-manifests
+      env:
+        - name: GIT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: token
+        - name: GIT_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: email
+        - name: GIT_USER
+          valueFrom:
+            secretKeyRef:
+              name: $(params.git-credentials-secret)
+              key: username
+      script: |
+        #!/bin/sh
+        set -eux
+        git config user.email "${GIT_EMAIL}"
+        git config user.name "${GIT_USER}"
+        git remote set-url origin "https://${GIT_TOKEN}@github.com/BRHM1/openshift-manifests.git"
+
+        git add backend.yaml
+        git commit -m "CI/CD: Update backend image to $(params.image-tag)"
+        git push origin feature-$(params.build-id)

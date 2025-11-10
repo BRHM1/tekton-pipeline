@@ -1,7 +1,7 @@
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
-  name: vulnado-build-config
+  name: build-config
 spec:
   source:
     type: Git
@@ -16,7 +16,7 @@ spec:
   output:
     to:
       kind: ImageStreamTag  
-      name: 'vulnado-image-stream:latest'
+      name: 'image-stream:latest'
   triggers:
     - type: ConfigChange
     - type: ImageChange
