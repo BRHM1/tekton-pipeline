@@ -268,8 +268,7 @@ spec:
       taskRef:
         name: k8s-update-image-tag
       runAfter:
-        - trivy-image-scan
-        - anchore-scan
+        - kube-bench
       workspaces:
         - name: source
           workspace: shared-data

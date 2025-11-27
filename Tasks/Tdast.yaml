@@ -51,7 +51,7 @@ spec:
         set -e
         echo "[INFO] HOME is set to $HOME"
         mkdir -p "$HOME/.fortify"
- 
+        sleep 180s
         # Login to SSC
         echo "[INFO] Logging into SSC at $(params.ssc-url)"
         fcli ssc session login \
@@ -59,7 +59,7 @@ spec:
           --password=${SSC_PASSWORD} \
           --url=$(params.ssc-url) \
           --insecure
-        sleep 60s
+
         # Create scan name with timestamp
         SCAN_NAME="$(params.scan-name)-$(date +%Y%m%d-%H%M%S)"
         echo "[INFO] Starting DAST scan: ${SCAN_NAME}"

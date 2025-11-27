@@ -1,0 +1,77 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: appsec-template
+  namespace: default
+spec:
+  params:
+    - name: gitref
+      description: Git branch or ref
+      default: "refs/heads/main"
+    - name: reponame
+      description: Repository name
+      default: "java-app"
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: appsec-pipeline-run-
+      spec:
+        pipelineRef:
+          name: appsec-pipeline
+        serviceAccountName: tekton-build-sa
+        taskRunSpecs:
+          - pipelineTaskName: build-docker-image
+            serviceAccountName: image-builder-sa
+          - pipelineTaskName: trivy-image-scan
+            serviceAccountName: image-builder-sa
+          - pipelineTaskName: anchore-scan
+            serviceAccountName: image-builder-sa
+          - pipelineTaskName: kube-bench
+            serviceAccountName: kube-bench
+        podTemplate:
+          container:
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop: ["ALL"]
+              seccompProfile:
+                type: RuntimeDefault
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 1Gi
+        params:
+          - name: repo-url
+            value: "https://github.com/ved-asole/eKart-ecommerce-backend.git"
+          - name: revision
+            value: "$(params.gitref)"
+          - name: iq-server-url
+            value: "http://34.18.141.239:8070/"
+          - name: iq-application-id
+            value: "1"
+          - name: sonatype-auth-secret
+            value: "sca-credentials"
+          - name: ssc-url
+            value: "http://34.18.141.239:8080/ssc"
+          - name: ssc-application-id
+            value: "10001"
+          - name: sensor-version
+            value: "25.2"
+          - name: ssc-auth-secret
+            value: "ssc-credentials"
+          - name: client-auth-token-secret
+            value: "client-auth-token-secret"
+          - name: target-url
+            value: "http://vulnado-app:8080"
+          - name: scan-name
+            value: "Pipeline-DAST-Scan"
+          - name: scan-settings-id
+            value: "42acc24d-b28d-4e5c-abd7-3bc457299847"
+          - name: scan-mode
+            value: "CrawlAndAudit"

@@ -1,0 +1,13 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: appsec-listener
+  namespace: default
+spec:
+  serviceAccountName: tekton-triggers-admin
+  triggers:
+    - name: trigger-appsec
+      bindings:
+        - ref: appsec-binding
+      template:
+        ref: appsec-template

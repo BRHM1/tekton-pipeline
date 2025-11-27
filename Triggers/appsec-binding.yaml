@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: appsec-binding
+  namespace: default
+spec:
+  params:
+    - name: gitref
+      value: $(body.ref)
+    - name: reponame
+      value: $(body.repository.name)
